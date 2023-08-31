@@ -1,6 +1,6 @@
 # DVM Reference Implementation
 
-This is a reference implementation of DVM (Data Vending Machine) backend.
+This is a reference implementation of a DVM (Data Vending Machine) backend.
 
 ## Properties
 
