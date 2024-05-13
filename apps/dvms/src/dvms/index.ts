@@ -65,13 +65,7 @@ export class DVM {
 
                     debug(`subscribing with filter: ` + JSON.stringify(filter));
                     
-                    const sub = this.ndk.subscribe(
-                        {
-                            kinds: [iKind],
-                            since: Math.floor(Date.now() / 1000)
-                        },
-                        { closeOnEose: false }
-                    );
+                    const sub = this.ndk.subscribe(filter, { closeOnEose: false });
 
                     sub.on("event", (e) => this.handleEvent(e));
                 }, 2000);
