@@ -22,12 +22,18 @@ const dvms = [];
 export const ndk = new NDK({
     explicitRelayUrls: [
         "wss://relay.damus.io",
-        // "wss://offchain.pub/",
-        // 'wss://relay.f7z.io',
+        "wss://offchain.pub/",
+        'wss://relay.f7z.io',
         // "wss://blastr.f7z.xyz",
         // "wss://nostr.mutinywallet.com",
-        // "wss://nos.lol"
+        "wss://nos.lol",
+        "wss://relay.f7z.io"
     ],
+    enableOutboxModel: true,
+    // outboxRelayUrls: [
+    //     "wss://purplepag.es",
+    //     "wss://relay.damus.io"
+    // ]
 });
 await ndk.connect(2000);
 

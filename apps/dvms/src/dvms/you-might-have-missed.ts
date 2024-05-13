@@ -65,7 +65,7 @@ async function getMissedEventIds(
 
     // get the user's activity chunks
     const getUserInactivePeriods = async (since?: number) => {
-        const filter: NDKFilter = { authors: [ user.hexpubkey() ] , limit: 1000 };
+        const filter: NDKFilter = { authors: [ user.hexpubkey ] , limit: 1000 };
         if (since) { filter.since = since; }
 
         const userEvents = await ndk.fetchEvents(filter)
@@ -82,7 +82,7 @@ async function getMissedEventIds(
         await getUserFollows();
 
         // partition user follows into chunks of 100
-        const follows = Array.from(userFollows).map((f: NDKUser) => f.hexpubkey());
+        const follows = Array.from(userFollows).map((f: NDKUser) => f.hexpubkey);
         const followChunks = [];
         for (let i = 0; i < follows.length; i += 50) {
             followChunks.push(follows.slice(i, i + 200));
@@ -181,7 +181,7 @@ async function getMissedEventIds(
 
     for (const event of events) {
         // remove events that were posted by the user
-        if (event.pubkey === user.hexpubkey()) {
+        if (event.pubkey === user.hexpubkey) {
             console.log(`event ${event.id} was posted by the user`);
             allReactedToEvents.delete(event.id);
             continue;
@@ -208,7 +208,7 @@ export async function register(dvm: DVM): Promise<void> {
         let pubkey = request.getParam("user");
 
         if (pubkey?.startsWith('npub')) {
-            pubkey = (new NDKUser({ npub: pubkey })).hexpubkey();
+            pubkey = (new NDKUser({ npub: pubkey })).hexpubkey;
         }
 
         console.log({pubkey})
@@ -229,7 +229,7 @@ export async function register(dvm: DVM): Promise<void> {
                     response.status = NDKDvmJobFeedbackStatus.Success;
                 } else {
                     response.content = "Hmmm, I couldn't find any events you might have missed. I'm sorry to have failed you in this way."
-                    response.status = NDKDvmJobFeedbackStatus.Failed;
+                    response.status = 'failed';
                 }
 
                 resolve(response);
@@ -237,5 +237,5 @@ export async function register(dvm: DVM): Promise<void> {
         });
     };
 
-    dvm.handlers[65008].push(getSuggestion);
+    dvm.handlers[5300].push(getSuggestion);
 }

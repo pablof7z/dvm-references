@@ -4,15 +4,17 @@ import NDK, {
     NDKUser,
     NDKPrivateKeySigner,
     NDKDvmJobFeedbackStatus,
+    NDKFilter,
 } from "@nostr-dev-kit/ndk";
 import { NDKDVMJobResult } from "@nostr-dev-kit/ndk";
 import debug from "debug";
 import { DVMConfig } from "../config/index.js";
 
-type EventHandler = (request: NDKDVMRequestExtended) => Promise<NDKDVMJobResult>;
+type EventHandler = (request: NDKDVMRequestExtended) => Promise<NDKDVMJobResult | undefined>;
 
 export type NDKDVMRequestExtended = NDKDVMRequest & {
     processing: (message?: string) => Promise<void>;
+    finished: (result: NDKDVMJobResult) => Promise<void>;
 };
 
 export class DVM {
@@ -20,7 +22,7 @@ export class DVM {
     readonly config: DVMConfig;
     readonly d: debug.Debugger;
     readonly signer: NDKPrivateKeySigner;
-    private user: NDKUser | undefined;
+    public user: NDKUser | undefined;
     public ndk: NDK; // DVMs shouldn't really use this same NDK because if they don't properly clean up after themselves they will leak subscriptions on the main code
     public handlers: Record<number, EventHandler[]>;
 
@@ -52,15 +54,26 @@ export class DVM {
                 this.handlers[iKind] ??= [];
 
                 setTimeout(() => {
-                const sub = this.ndk.subscribe(
-                    {
+                    const filter: NDKFilter = {
                         kinds: [iKind],
-                        since: Math.floor(Date.now() / 1000) - 300
-                    },
-                    { closeOnEose: false }
-                );
+                        since: Math.floor(Date.now() / 1000),
+                    };
 
-                sub.on("event", (e) => this.handleEvent(e));
+                    if (this.config.requireTagging) {
+                        filter["#p"] = [this.user!.pubkey];
+                    }
+
+                    debug(`subscribing with filter: ` + JSON.stringify(filter));
+                    
+                    const sub = this.ndk.subscribe(
+                        {
+                            kinds: [iKind],
+                            since: Math.floor(Date.now() / 1000)
+                        },
+                        { closeOnEose: false }
+                    );
+
+                    sub.on("event", (e) => this.handleEvent(e));
                 }, 2000);
             }
         });
@@ -79,7 +92,9 @@ export class DVM {
         }
     }
 
-    public handleEvent(event: NDKEvent): void {
+    async handleEvent(event: NDKEvent): Promise<void> {
+        const isEncrypted = event.getMatchingTags("encrypted").length > 0;
+        const customer = event.author;
         this.d(`received event`, event.kind);
 
         const extReq: NDKDVMRequestExtended = NDKDVMRequest.from(event) as NDKDVMRequestExtended;
@@ -91,30 +106,64 @@ export class DVM {
 
             if (message) feedback.content = message;
 
-            feedback.pubkey = this.user!.hexpubkey();
+            feedback.pubkey = this.user!.pubkey;
             feedback.ndk = this.ndk;
             await feedback.sign(this.signer);
             this.tryToPublish(feedback);
         };
 
+        extReq.finished = async (result: NDKDVMJobResult) => {
+            result.jobRequest = event;
+            result.pubkey = this.user!.pubkey;
+            result.ndk = this.ndk;
+            result.sign(this.signer).then(() => {
+                this.tryToPublish(result);
+            });
+        }
+
+        // if the event is encrypted, decrypt it and place the decrypted tags in the event's tags
+        if (isEncrypted) {
+            try {
+                const decryptedTags = JSON.parse(await this.signer.decrypt(customer, event.content));
+                extReq.tags = [ ...extReq.tags, ...decryptedTags ];
+                extReq.content = "";
+            } catch (e: any) {
+                this.d(`error decrypting event`, e);
+                const feedback = extReq.createFeedback(`error decrypting event: ${e.message}`);
+                feedback.pubkey = this.user!.pubkey;
+                feedback.ndk = this.ndk;
+                await feedback.sign(this.signer);
+                this.tryToPublish(feedback);
+                return;
+            }
+        }
+
         // go through the handlers of this kind
         for (const handler of this.handlers[event.kind!]) {
             // check if this DVM has been tagged
-            if (!event.tags.find((tag) => tag[0] === "p" && tag[1] === this.user!.hexpubkey())) {
+            if (!event.tags.find((tag) => tag[0] === "p" && tag[1] === this.user!.pubkey)) {
                 // if requireTagging is set to true, skip this event
                 if (this.config.requireTagging)
                     continue;
             }
 
-            handler(extReq).then((result: NDKDVMJobResult) => {
-                result.jobRequest = event;
-                result.tag(event, "job");
-                result.pubkey = this.user!.hexpubkey();
-                result.ndk = this.ndk;
-                result.sign(this.signer).then(() => {
-                    this.tryToPublish(result);
-                });
-            });
+            handler(extReq).then((result: NDKDVMJobResult | undefined) => {
+                if (!result) return;
+
+                extReq.finished(result);
+            }).catch(async (error: string) => {
+                this.d(`error message:`, error);
+                const feedback = await extReq.createFeedback(
+                    NDKDvmJobFeedbackStatus.Processing
+                );
+
+                if (error) feedback.content = error;
+
+                feedback.pubkey = this.user!.pubkey;
+                feedback.ndk = this.ndk;
+                await feedback.sign(this.signer);
+                this.tryToPublish(feedback);
+            })
         }
     }
 }

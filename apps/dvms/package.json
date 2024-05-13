@@ -4,7 +4,7 @@
     "description": "nostr data vending machine skeleton",
     "type": "module",
     "engines": {
-        "node": "~19"
+        "node": "~20"
     },
     "keywords": [
         "nostr",
@@ -42,7 +42,8 @@
     "author": "pablof7z",
     "license": "MIT",
     "dependencies": {
-        "@nostr-dev-kit/ndk": "workspace:*",
+        "@getalby/sdk": "^2.7.0",
+        "@nostr-dev-kit/ndk": "^2.1.1",
         "@trivago/prettier-plugin-sort-imports": "^4.2.0",
         "@types/debug": "^4.1.8",
         "axios": "^1.4.0",
@@ -54,6 +55,7 @@
         "light-bolt11-decoder": "^3.0.0",
         "lnbits": "^1.1.5",
         "nostr-tools": "^1.14.0",
+        "opentimestamps": "^0.4.9",
         "tslib": "~2.6.2",
         "websocket-polyfill": "^0.0.3",
         "websocket.io": "^0.2.1",

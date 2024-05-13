@@ -35,5 +35,5 @@ export async function register(dvm: DVM): Promise<void> {
         return response;
     };
 
-    dvm.handlers[65006].push(getSuggestion);
+    dvm.handlers[5301].push(getSuggestion);
 }
