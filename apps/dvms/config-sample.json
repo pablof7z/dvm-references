@@ -1,1 +1,33 @@
-{ "processWithoutPaymentLimit": 5000, "serveResultsWithoutPaymentLimit": 1000 }
+{
+    "dvms": {
+        "You might have missed": {
+            "module": "/Users/pablofernandez/src/kind0/dvm/apps/dvms/dist/dvms/you-might-have-missed.js",
+            "key": "<private-key-for-the-dvm-here>",
+            "requireTagging": true,
+            "kinds": {
+                "5300": {
+                    "nip89": {
+                            "name":"You might have missed",
+                            "image":"https://cdn.nostr.build/i/fb207be87d748ad927f52a063c221d1d97ef6d75e660003cb6e85baf2cd2d64e.jpg",
+                            "about":"My goal is to help you keep up – or catch up – with your world, no matter how much time you spend on t̶w̶i̶t̶t̶e̶r̶ nostr.",
+                            "nip90Params":{"user":{"required":false,"values":[]}}
+                        }
+                    }
+                }
+            }
+        },
+        "NWC DVM": {
+            "module": "/Users/pablofernandez/src/kind0/dvm/apps/dvms/dist/dvms/nwc.js",
+                "key": "<private-key-for-the-dvm-here>",
+                "requireTagging": true,
+                "kinds": {
+                    "5901": {
+                    },
+                    "5902": {
+                    },
+                    "5903": {
+                    }
+                }
+        }
+    }
+}

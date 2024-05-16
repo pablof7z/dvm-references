@@ -1,9 +1,12 @@
 import fs from "fs";
 import { configFile } from "../main.js";
 
+export type Nip89Config = Record<string, any>;
+
 export type KindConfiguration = {
     processWithoutPaymentLimit?: number;
     serveResultsWithoutPaymentLimit?: number;
+    nip89?: Nip89Config;
 };
 
 export type DVMConfig = {

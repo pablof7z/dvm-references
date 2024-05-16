@@ -5,10 +5,11 @@ import NDK, {
     NDKPrivateKeySigner,
     NDKDvmJobFeedbackStatus,
     NDKFilter,
+    NDKKind,
 } from "@nostr-dev-kit/ndk";
 import { NDKDVMJobResult } from "@nostr-dev-kit/ndk";
 import debug from "debug";
-import { DVMConfig } from "../config/index.js";
+import { DVMConfig, Nip89Config } from "../config/index.js";
 
 type EventHandler = (request: NDKDVMRequestExtended) => Promise<NDKDVMJobResult | undefined>;
 
@@ -67,10 +68,36 @@ export class DVM {
                     
                     const sub = this.ndk.subscribe(filter, { closeOnEose: false });
 
+                    if (kindConfig?.nip89) {
+                        this.publishNip89Announcement(iKind, kindConfig.nip89);
+                    }
+
                     sub.on("event", (e) => this.handleEvent(e));
                 }, 2000);
             }
         });
+    }
+
+    public async publishNip89Announcement(kind: number, config: Nip89Config): Promise<void> {
+        const existingAnnouncenment = await this.ndk.fetchEvent({
+            authors: [this.user!.pubkey], "#k": [kind.toString()], kinds: [NDKKind.AppHandler]
+        })
+        let dTag = existingAnnouncenment?.tagValue("d");
+
+        const event = new NDKEvent(this.ndk);
+        event.kind = NDKKind.AppHandler;
+        event.content = JSON.stringify(config);
+        event.tags.push(["k", kind.toString()])
+
+        if (dTag && existingAnnouncenment) {
+            this.d(`updating existing announcement (${existingAnnouncenment.encode()})`);
+            event.tags.push(["d", dTag]);
+        }
+
+        this.d(`publishing announcement: ${JSON.stringify(event.rawEvent())}`);
+
+        await event.sign(this.signer);
+        await this.tryToPublish(event);
     }
 
     private async tryToPublish(event: NDKEvent, attempt: number = 0, maxAttempts = 5, delayBetweenAttempts = 5000): Promise<void> {

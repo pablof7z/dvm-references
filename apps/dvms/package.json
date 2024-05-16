@@ -1,6 +1,6 @@
 {
     "name": "data-vending-machine-skeleton",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "nostr data vending machine skeleton",
     "type": "module",
     "engines": {
