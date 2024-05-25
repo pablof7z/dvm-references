@@ -105,10 +105,12 @@ export class DVM {
         profile.kind = 0;
         profile.created_at = undefined;
         profile.content = JSON.stringify(config);
+        await profile.sign(this.signer);
         await this.tryToPublish(profile);
 
         const relayList = new NDKRelayList(this.ndk);
         relayList.writeRelayUrls = this.ndk.pool.connectedRelays().map((relay: NDKRelay) => relay.url);
+        await relayList.sign(this.signer);
         await this.tryToPublish(relayList);
 
         this.d(`published relay list ${relayList.encode()}`);
