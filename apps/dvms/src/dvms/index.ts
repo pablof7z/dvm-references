@@ -6,6 +6,8 @@ import NDK, {
     NDKDvmJobFeedbackStatus,
     NDKFilter,
     NDKKind,
+    NDKRelay,
+    NDKRelayList,
 } from "@nostr-dev-kit/ndk";
 import { NDKDVMJobResult } from "@nostr-dev-kit/ndk";
 import debug from "debug";
@@ -98,6 +100,19 @@ export class DVM {
 
         await event.sign(this.signer);
         await this.tryToPublish(event);
+
+        const profile = new NDKEvent(this.ndk);
+        profile.kind = 0;
+        profile.created_at = undefined;
+        profile.content = JSON.stringify(config);
+        await this.tryToPublish(profile);
+
+        const relayList = new NDKRelayList(this.ndk);
+        relayList.writeRelayUrls = this.ndk.pool.connectedRelays().map((relay: NDKRelay) => relay.url);
+        await this.tryToPublish(relayList);
+
+        this.d(`published relay list ${relayList.encode()}`);
+        console.log(`published relay list`, relayList.rawEvent());
     }
 
     private async tryToPublish(event: NDKEvent, attempt: number = 0, maxAttempts = 5, delayBetweenAttempts = 5000): Promise<void> {
